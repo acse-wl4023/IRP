@@ -42,40 +42,70 @@ def get_all_data(folders):
 
 
 class Preprocessor:
-    def __init__(self, _data, n_components=80):
-        self.data = _data
-        self.n_components = n_components
-        self.pca = None
-        self.scaler = None
+    def __init__(self):
+        self.mean_1 = None
+        self.std_1 = None
 
-    def fit(self):
-        self.pca = PCA(n_components=self.n_components)
-        self.pca.fit(self.data)
-        x = self.pca.transform(self.data)
-        self.scaler = StandardScaler()
-        self.scaler.fit(x)
+        self.mean_2 = None
+        self.std_2 = None
+
+        self.pca = None
+
+    def fit(self, data, n_components=50):
+        self.mean_1 = np.mean(data, axis=(0, 1))
+        self.std_1 = np.std(data, axis=(0, 1))
+        normalized_data = (data-self.mean_1)/self.std_1
+
+        shape = data.shape
+        reshape_normalized_data = normalized_data.reshape(shape[0]*shape[1], shape[2])
+        # reshape_normalized_data = data.reshape(shape[0]*shape[1], shape[2])
+        self.pca = PCA(n_components=n_components)
+        self.pca.fit(reshape_normalized_data)
+        pca_data = self.pca.transform(reshape_normalized_data)
+
+        reshape_pca_data = pca_data.reshape(shape[0], shape[1], n_components)
+        self.mean_2 = np.mean(reshape_pca_data, axis=(0, 1))
+        self.std_2 = np.std(reshape_pca_data, axis=(0, 1))
+
 
     def transform(self, data):
-        compressed_data = self.pca.transform(data)
-        scaled_data = self.scaler.transform(compressed_data)
-        print(scaled_data.max())
-        return scaled_data
+        normalized_data = (data-self.mean_1)/self.std_1
 
-    def inverse_transform(self, scaled_data):
-        compressed_data = self.scaler.inverse_transform(scaled_data)
-        recon_data = self.pca.inverse_transform(compressed_data)
+        shape = data.shape
+        reshape_normalized_data = normalized_data.reshape(shape[0]*shape[1], shape[2])
+        # reshape_normalized_data = data.reshape(shape[0]*shape[1], shape[2])
+        pca_data = self.pca.transform(reshape_normalized_data)
+
+        reshape_pca_data = pca_data.reshape(shape[0], shape[1], self.pca.n_components_)
+        normalized_pca_data = (reshape_pca_data-self.mean_2)/self.std_2
+
+        return normalized_pca_data
+
+
+    def inverse_transform(self, normalized_pca_data):
+        reshape_pca_data = normalized_pca_data*self.std_2+self.mean_2 #(num_input, seq_len, num_feature)
+
+        shape = reshape_pca_data.shape
+        pca_data = reshape_pca_data.reshape(shape[0]*shape[1], shape[2]) #(num_input*seq_len, num_feature)
+        reshape_normalized_data = self.pca.inverse_transform(pca_data) #(num_input*seq_len, original_num_feature)
+
+        shape_ = reshape_normalized_data.shape[-1]
+        # recon_data = reshape_normalized_data.reshape(shape[0], shape[1], shape_) #(num_input, seq_len, original_num_feature)
+        normalized_data = reshape_normalized_data.reshape(shape[0], shape[1], shape_) #(num_input, seq_len, original_num_feature)
+        recon_data = normalized_data*self.std_1+self.mean_1
+        
         return recon_data
 
 
-def data_panelling(data, len_of_each_case, window_size=10, step_size=10):
+def segment_data(data, len_of_each_case, window_size=10, step_size=10):
     all_data = []
     for i in range(len(len_of_each_case)-1):
 
         for j in range(len_of_each_case[i], len_of_each_case[i+1]-window_size+1, step_size):
-            all_data.append(np.expand_dims(data[j:j+window_size, :], axis=0))
+            all_data.append(np.expand_dims(data[j:j+window_size], axis=0))
         # print("case: ", i, ", length: ", len(all_data))
         if (len_of_each_case[i+1]-window_size-len_of_each_case[i]) % step_size != 0:
-            all_data.append(np.expand_dims(data[len_of_each_case[i+1]-window_size:len_of_each_case[i+1], :], axis=0))
+            all_data.append(np.expand_dims(data[len_of_each_case[i+1]-window_size:len_of_each_case[i+1]], axis=0))
     return np.concatenate(all_data, axis=0)
 
 
@@ -92,27 +122,23 @@ class MyDataset(Dataset):
 
 
 class PreprocessorCNN:
-    def __init__(self, data, n_channel):
-        self.data = data
-        self.n_channel = n_channel
-        self.scalerList = []
+    def __init__(self):
+        self.mean = None
+        self.std = None
 
-    def fit(self):
-        for i in range(self.n_channel):
-            scaler = StandardScaler()
-            scaler.fit(self.data[:, :, i])
-            self.scalerList.append(scaler)
+    def fit(self, data):
+        self.mean = np.mean(data, axis=(0, 1))
+        self.std = np.std(data, axis=(0, 1))
+
+        # if np.any(self.std == 0):
+        #     print(1111)
 
     def transform(self, x):
-        transformed_data = np.zeros_like(x)
-        for i in range(self.n_channel):
-            transformed_data[:, :, i] = self.scalerList[i].transform(x[:, :, i])
+        transformed_data = (x-self.mean)/self.std
 
         return transformed_data
 
     def inverse_transform(self, x):
-        recon_data = np.zeros_like(x)
-        for i in range(self.n_channel - 1, -1, -1):
-            recon_data[:, :, i] = self.scalerList[i].inverse_transform(x[:, :, i])
+        recon_data = x*self.std+self.mean
 
         return recon_data
