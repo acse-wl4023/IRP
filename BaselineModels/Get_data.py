@@ -123,22 +123,22 @@ class MyDataset(Dataset):
 
 class PreprocessorCNN:
     def __init__(self):
-        self.mean = None
-        self.std = None
+        self.max = None
+        self.min = None
 
     def fit(self, data):
-        self.mean = np.mean(data, axis=(0, 1))
-        self.std = np.std(data, axis=(0, 1))
+        self.max = np.max(data, axis=(0, 1))
+        self.min = np.min(data, axis=(0, 1))
 
         # if np.any(self.std == 0):
         #     print(1111)
 
     def transform(self, x):
-        transformed_data = (x-self.mean)/self.std
+        transformed_data = x/self.max
 
         return transformed_data
 
     def inverse_transform(self, x):
-        recon_data = x*self.std+self.mean
+        recon_data = x*self.max
 
         return recon_data
