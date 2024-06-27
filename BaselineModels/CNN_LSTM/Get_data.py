@@ -51,32 +51,43 @@ def segment_data(data, len_of_each_case, window_size=10, step_size=10):
 
 class Preprocessor:
     def __init__(self):
-        self.mean = None
-        self.std = None
+        # self.mean = None
+        # self.std = None
+
+        self.max = None
+        self.min = None
 
     def fit(self, data):
-        self.max = np.max(data, axis=(0, 1, 2))
-        self.min = np.min(data, axis=(0, 1, 2))
+        num_dim = data.ndim
+        ax = np.arange(num_dim)[:-1].tolist()
+        # self.mean = np.mean(data, axis=tuple(ax), keepdims=True)
+        # self.std = np.std(data, axis=tuple(ax), keepdims=True)
+
+        self.max = np.max(data, axis=tuple(ax), keepdims=True)
+        self.min = np.min(data, axis=tuple(ax), keepdims=True)
 
     def transform(self, x):
-        transformed_data = (x-self.min)/(self.max-self.min)
+        # transformed_data = (x-self.mean)/self.std
+        transformed_data = x/self.max
 
         return transformed_data
 
     def inverse_transform(self, x):
-        recon_data = x*(self.max-self.min)+self.min
+        # recon_data = x*self.std+self.mean
+        recon_data = x*self.max
 
         return recon_data
     
 class MyDataset(Dataset):
-    def __init__(self, x_nodes, edge_index, edge_weight, y_nodes):
-        self.x_nodes = x_nodes
-        self.edge_index = edge_index
-        self.edge_weight = edge_weight
-        self.y_nodes = y_nodes
+    def __init__(self, x,  y=None):
+        self.x_nodes = x
+        self.y_nodes = y
 
     def __len__(self):
         return self.x_nodes.shape[0]
 
     def __getitem__(self, idx):
-        return self.x_nodes[idx], self.edge_index, self.edge_weight, self.y_nodes[idx]
+        if self.y_nodes == None:
+            return self.x_nodes[idx]
+        else:
+            return self.x_nodes[idx], self.y_nodes[idx]
