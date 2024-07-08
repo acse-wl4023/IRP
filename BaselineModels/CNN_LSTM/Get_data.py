@@ -79,15 +79,20 @@ class Preprocessor:
         return recon_data
     
 class MyDataset(Dataset):
-    def __init__(self, x,  y=None):
+    def __init__(self, x,  y=None, case=None):
         self.x_nodes = x
         self.y_nodes = y
+        self.case = case
 
     def __len__(self):
         return self.x_nodes.shape[0]
 
     def __getitem__(self, idx):
-        if self.y_nodes == None:
+        if self.y_nodes is None:
             return self.x_nodes[idx]
         else:
-            return self.x_nodes[idx], self.y_nodes[idx]
+            if self.case is None:
+                return self.x_nodes[idx], self.y_nodes[idx]
+            else:
+                return self.x_nodes[idx], self.y_nodes[idx], self.case[idx]
+        
