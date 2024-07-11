@@ -128,6 +128,36 @@ class Encoder(nn.Module):
                 output_features = self.hidden_channels
             self.downsample_mlp.append(nn.Linear(input_features, output_features))
             self.downsample_norm = nn.LayerNorm(output_features)
+        
+         # 用于生成fine graph的边特征
+        # self.edge_encoder_mlp = nn.ModuleList()
+        # for j in range(self.n_mlp_mp):
+        #     if j == 0: 
+        #         input_features = 1 # 2-dimensional distance vector 
+        #         output_features = self.hidden_channels
+        #     elif j == self.n_mlp_mp-1:
+        #         input_features = self.hidden_channels
+        #         output_features = 1
+        #     else:
+        #         input_features = self.hidden_channels
+        #         output_features = self.hidden_channels
+        #     self.edge_encoder_mlp.append(nn.Linear(input_features, output_features))
+        self.edge_encoder_mlp = nn.ModuleList()
+        for i in range(self.depth):
+            mlp = nn.ModuleList() # one block contains multiple mp layers
+            for j in range(self.n_mlp_mp):
+                if j == 0: 
+                    input_features = 1 # 2-dimensional distance vector 
+                    output_features = self.hidden_channels
+                elif j == self.n_mlp_mp-1:
+                    input_features = self.hidden_channels
+                    output_features = 1
+                else:
+                    input_features = self.hidden_channels
+                    output_features = self.hidden_channels
+                print(input_features, output_features)
+                mlp.append(nn.Linear(input_features, output_features))
+            self.edge_encoder_mlp.append(mlp)
 
 
     def forward(self, x, edge_index, edge_attr, pos):
@@ -141,6 +171,13 @@ class Encoder(nn.Module):
             x = self.act(x)
 
         # initialize 进行第一次图卷积
+        # initialize 对最粗的图进行卷积
+        
+        edge_attr = edge_attr.fill_(1).unsqueeze(1)
+        # use mlp update the attr of edge of coarse graph
+        for j in range(self.n_mlp_mp):
+            edge_attr = self.edge_encoder_mlp[0][j](edge_attr)
+            edge_attr = self.act(edge_attr)
         
         for j in range(self.num_mp_layers[0]):
             x = self.mp_blocks[0][j](x, edge_index, edge_attr)
@@ -172,6 +209,15 @@ class Encoder(nn.Module):
                                                                           edge_index,
                                                                           edge_attr,
                                                                           pos)
+            
+            edge_attr.fill_(1)
+            # use mlp update the attr of edge of coarse graph
+    
+            for j in range(self.n_mlp_mp):
+                # print('1111')
+                edge_attr = self.edge_encoder_mlp[i][j](edge_attr)
+                edge_attr = self.act(edge_attr)
+
             position.append(pos)
             clusters.append(cluster)
             edge_indices.append(edge_index)
@@ -265,16 +311,34 @@ class Decoder(nn.Module):
             self.upsample_mlp.append(nn.Linear(input_features, output_features))
             self.upsample_norm = nn.LayerNorm(output_features)
         
-        # # 用于生成fine graph的边特征
+        # 用于生成fine graph的边特征
         # self.edge_decoder_mlp = nn.ModuleList()
         # for j in range(self.n_mlp_mp):
         #     if j == 0: 
-        #         input_features = self.hidden_channels # 2-dimensional distance vector 
+        #         input_features = 1 # 2-dimensional distance vector 
         #         output_features = self.hidden_channels
+        #     elif j == self.n_mlp_mp-1:
+        #         input_features = self.hidden_channels
+        #         output_features = 1
         #     else:
         #         input_features = self.hidden_channels
         #         output_features = self.hidden_channels
         #     self.edge_decoder_mlp.append(nn.Linear(input_features, output_features))
+        self.edge_decoder_mlp = nn.ModuleList()
+        for i in range(self.depth):
+            mlp = nn.ModuleList() # one block contains multiple mp layers
+            for j in range(self.n_mlp_mp):
+                if j == 0: 
+                    input_features = 1 # 2-dimensional distance vector 
+                    output_features = self.hidden_channels
+                elif j == self.n_mlp_mp-1:
+                    input_features = self.hidden_channels
+                    output_features = 1
+                else:
+                    input_features = self.hidden_channels
+                    output_features = self.hidden_channels
+                mlp.append(nn.Linear(input_features, output_features))
+            self.edge_decoder_mlp.append(mlp)
 
         # 用于节点的特征嵌入
         self.node_decoder_mlp = nn.ModuleList()
@@ -289,6 +353,12 @@ class Decoder(nn.Module):
 
     def forward(self, x, edge_index, edge_attr, edge_indices, edge_attrs, edge_indices_f2c, position, node_attrs, clusters):
         # initialize 对最粗的图进行卷积
+        edge_attr.fill_(1)
+        # use mlp update the attr of edge of coarse graph
+        for j in range(self.n_mlp_mp):
+            edge_attr = self.edge_decoder_mlp[0][j](edge_attr)
+            edge_attr = self.act(edge_attr)
+
         for j in range(self.num_mp_layers[0]):
             x = self.mp_blocks[0][j](x, edge_index, edge_attr)
             x = self.act(x)
@@ -321,14 +391,15 @@ class Decoder(nn.Module):
             x = self.edge_aggregator((pos_coarse, pos_fine), edge_index_c2f, temp_ea)
 
             edge_index = edge_indices[i-1]
-            # edge_attr = -edge_attrs[i-1]
-            # # use mlp update the attr of edge of coarse graph
-            # for j in range(self.n_mlp_mp):
-            #     edge_attr = self.edge_decoder_mlp[j](edge_attr)
-            #     edge_attr = self.act(edge_attr)
+            edge_attr = edge_attrs[i-1]
+            edge_attr.fill_(1)
+        # use mlp update the attr of edge of coarse graph
+            for j in range(self.n_mlp_mp):
+                edge_attr = self.edge_decoder_mlp[i][j](edge_attr)
+                edge_attr = self.act(edge_attr)
             
             for j in range(self.num_mp_layer[i]):
-                x = self.mp_blocks[i][j](x, edge_index)
+                x = self.mp_blocks[i][j](x, edge_index, edge_attr)
                 x = self.act(x)
             
         for j in range(self.n_mlp_mp):

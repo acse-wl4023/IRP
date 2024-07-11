@@ -31,6 +31,7 @@ def get_all_nodes(folders):
     for folder in folders:
         files = [os.path.join(folder, f) for f in os.listdir(folder) if
                  f.startswith('foward_soln_timestep_') and f.endswith('.npy')]
+        files.sort(key=extract_timestep)
         data = read_data(files)
         length = length + len(files)
         len_of_each_case.append(length)
