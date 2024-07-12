@@ -155,7 +155,7 @@ class Encoder(nn.Module):
                 else:
                     input_features = self.hidden_channels
                     output_features = self.hidden_channels
-                print(input_features, output_features)
+                # print(input_features, output_features)
                 mlp.append(nn.Linear(input_features, output_features))
             self.edge_encoder_mlp.append(mlp)
 
