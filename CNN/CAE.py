@@ -22,9 +22,9 @@ class Encoder(nn.Module):
         self.dropout3 = nn.Dropout(0.1)
         self.pool3 = nn.MaxPool1d(5)
 
-        self.avg_pool = nn.AdaptiveAvgPool1d(100) # 100太小
+        self.avg_pool = nn.AdaptiveAvgPool1d(777)
         self.flatten = nn.Flatten()
-        self.dense = nn.Linear(100, self.output_size)
+        self.dense = nn.Linear(777, self.output_size)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
