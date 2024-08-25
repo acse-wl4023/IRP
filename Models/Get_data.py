@@ -58,8 +58,11 @@ class Preprocessor:
 
     def fit(self, data):
         # 计算数据的整体最大值和最小值
-        self.mean = torch.mean(data)
-        self.std = torch.std(data)
+        self.mean = torch.mean(data).item()
+        self.std = torch.std(data).item()
+
+        # self.mean = data.mean()
+        # self.std = data.std()
 
     def transform(self, x):
         # 使用整体最大值进行归一化
@@ -113,3 +116,29 @@ class CustomDataset(tgd.Dataset):
         
         return data
         
+
+def segment_data_torch(data: torch.Tensor, len_of_each_case: list[int], window_size: int = 10, step_size: int = 10) -> torch.Tensor:
+    all_data = []
+    for i in range(len(len_of_each_case) - 1):
+        for j in range(len_of_each_case[i], len_of_each_case[i + 1] - window_size + 1, step_size):
+            # Extract the segment and expand dimensions for batch size
+            segment = data[j:j + window_size]
+            all_data.append(segment.unsqueeze(0))  # Expand dims to add batch size dimension
+        
+        # Handle the case where the last segment does not fit evenly
+        if (len_of_each_case[i + 1] - window_size - len_of_each_case[i]) % step_size != 0:
+            segment = data[len_of_each_case[i + 1] - window_size:len_of_each_case[i + 1]]
+            all_data.append(segment.unsqueeze(0))  # Expand dims to add batch size dimension
+
+    # Concatenate all segments into a single tensor
+    return torch.cat(all_data, dim=0)
+
+def segment_data_list(data, len_of_each_case, window_size=10, step_size=10):
+    all_data = []
+    for i in range(len(len_of_each_case)-1):
+        for j in range(len_of_each_case[i], len_of_each_case[i+1]-window_size+1, step_size):
+            all_data.append(data[j:j+window_size])
+        # print("case: ", i, ", length: ", len(all_data))
+        if (len_of_each_case[i+1]-window_size-len_of_each_case[i]) % step_size != 0:
+            all_data.append(data[len_of_each_case[i+1]-window_size:len_of_each_case[i+1]])
+    return all_data

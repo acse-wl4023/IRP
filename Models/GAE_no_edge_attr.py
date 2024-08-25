@@ -179,6 +179,8 @@ class Encoder(nn.Module):
         # 用edge_encoder_mlp进行重新编码
 
         # node feature embedding
+        if torch.isnan(x).any():
+            print("NaN detected in input")
         for j in range(self.n_mlp_mp):
             x = self.node_embeding_mlp[j](x)
             x = self.act(x)
@@ -188,12 +190,12 @@ class Encoder(nn.Module):
 
         # # 第一层  边特征非线性变换然后进行message passing
         # edge_attr = edge_attr.fill_(1)
-        # use mlp update the attr of edge of coarse graph
-        for j in range(self.n_mlp_mp):
-            edge_attr = self.edge_encoder_mlp[0][j](edge_attr)
-            edge_attr = self.act(edge_attr)
-            if torch.isnan(edge_attr).any():
-                print(f"NaN detected in edge encoder MLP layer {j}")
+        # # use mlp update the attr of edge of coarse graph
+        # for j in range(self.n_mlp_mp):
+        #     edge_attr = self.edge_encoder_mlp[0][j](edge_attr)
+        #     edge_attr = self.act(edge_attr)
+        #     if torch.isnan(edge_attr).any():
+        #         print(f"NaN detected in edge encoder MLP layer {j}")
 
         # print(edge_attr.shape, edge_index.shape)
         for j in range(self.num_mp_layers[0]):
@@ -223,12 +225,12 @@ class Encoder(nn.Module):
                                                                     edge_index,
                                                                     edge_attr)
 
-            # edge_attr.fill_(1)
-            for j in range(self.n_mlp_mp):
-                edge_attr = self.edge_encoder_mlp[i][j](edge_attr)
-                edge_attr = self.act(edge_attr)
-                if torch.isnan(edge_attr).any():
-                    print(f"NaN detected in edge encoder MLP layer {j} of block {i}")
+            # # edge_attr.fill_(1)
+            # for j in range(self.n_mlp_mp):
+            #     edge_attr = self.edge_encoder_mlp[i][j](edge_attr)
+            #     edge_attr = self.act(edge_attr)
+            #     if torch.isnan(edge_attr).any():
+            #         print(f"NaN detected in edge encoder MLP layer {j} of block {i}")
 
             position.append(pos)
             edge_indices.append(edge_index)
@@ -382,12 +384,14 @@ class Decoder(nn.Module):
         # 解码器第一层
         # use mlp update the attr of edge of coarse graph
         # print(edge_attr)
-        for j in range(self.n_mlp_mp):
-            edge_attr = self.edge_decoder_mlp[0][j](edge_attr)
-            edge_attr = self.act(edge_attr)
-            if torch.isnan(edge_attr).any():
-                print(f"NaN detected in edge decoder MLP layer {j} of block 0")
+        # for j in range(self.n_mlp_mp):
+        #     edge_attr = self.edge_decoder_mlp[0][j](edge_attr)
+        #     edge_attr = self.act(edge_attr)
+        #     if torch.isnan(edge_attr).any():
+        #         print(f"NaN detected in edge decoder MLP layer {j} of block 0")
 
+        if torch.isnan(x).any():
+            print(f"NaN detected in decoder input")
         # 第一层的消息传递
         for j in range(self.num_mp_layers[0]):
             x = self.mp_blocks[0][j](x, edge_index, edge_attr)
@@ -441,11 +445,11 @@ class Decoder(nn.Module):
             # 更新精细图的边索引及其特征
             edge_index = edge_indices[i-1]
             edge_attr = edge_attrs[i-1]
-            for j in range(self.n_mlp_mp):
-                edge_attr = self.edge_decoder_mlp[i][j](edge_attr)
-                edge_attr = self.act(edge_attr)
-                if torch.isnan(edge_attr).any():
-                    print(f"NaN detected in edge decoder MLP layer {j} of block {i}")
+            # for j in range(self.n_mlp_mp):
+            #     edge_attr = self.edge_decoder_mlp[i][j](edge_attr)
+            #     edge_attr = self.act(edge_attr)
+            #     if torch.isnan(edge_attr).any():
+            #         print(f"NaN detected in edge decoder MLP layer {j} of block {i}")
 
             for j in range(self.num_mp_layers[i]):
                 x = self.mp_blocks[i][j](x, edge_index, edge_attr)

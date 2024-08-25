@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import Parameter
+from .CAE import Encoder, Decoder
 from .LSTM_Cell import LSTM_cell
 
 
@@ -12,6 +13,8 @@ class CAE_LSTM_encoder(nn.Module):
         self.hidden_size = hidden_size # input of the lstm encoder
 
         self.cell = LSTM_cell(self.latent_space, self.hidden_size)
+
+        self.encoder = Encoder(1, self.latent_space)
 
     def _init_states(self, x):
         h_t = torch.zeros(x.size(0), self.hidden_size, dtype=x.dtype).to(x.device)
@@ -28,8 +31,9 @@ class CAE_LSTM_encoder(nn.Module):
         seq_len = x.size(1)
 
         for i in range(seq_len):
-
-            h_t, c_t = self.cell(x[:, i, :], h_t, c_t)
+            hidden_input = self.encoder(x[:, i, :, :])
+            # print(hidden_input.shape)
+            h_t, c_t = self.cell(hidden_input, h_t, c_t)
 
         
         return h_t, c_t
@@ -49,6 +53,8 @@ class CAE_LSTM_decoder(nn.Module):
         self.b_h = Parameter(torch.Tensor(self.latent_space))
         self.b_c = Parameter(torch.Tensor(self.latent_space))
 
+        self.decoder = Decoder(self.latent_space, 1)
+
         self.act = nn.ELU()
 
     def _init_states(self, h, c):
@@ -64,8 +70,9 @@ class CAE_LSTM_decoder(nn.Module):
         output = []
         for _ in range(seq_len):
             h_t, c_t = self.cell(h, h_t, c_t)
+            out = self.decoder(h_t)
 
-            output.append(h_t)
+            output.append(out)
 
         return torch.stack(output, dim=1) # output: (batch_size, seq_len, channel, output_size)
         
