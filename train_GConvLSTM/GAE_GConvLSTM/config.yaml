@@ -1,0 +1,22 @@
+experiment:
+  latent_space: 25
+  window_size: 10
+  step_size: 3
+  seq_len: 5
+  hidden_channel_lstm: 1
+  input_node_channel: 1
+  output_node_channel: 1
+  hidden_channels: 8
+  n_mlp_mp: 3
+  num_mp_layers: [2, 2, 2]
+
+# Paths configuration
+paths:
+  data_directory: "/home/wl4023/data/Sibo_22Mar2024/"
+  save_path: "/home/wl4023/github_repos/IRP/GAE_GConvLSTM_result/"
+  preprocessor_file: "/home/wl4023/github_repos/IRP/preprocessor.pkl"
+  cluster_file: "/home/wl4023/github_repos/IRP/result/"
+
+train:
+  epoch: 1
+  seq_len: 5

@@ -1,0 +1,26 @@
+# General configuration
+experiment:
+  latent_space: 25
+  window_size: 10
+  step_size: 3
+  seq_len: 5
+
+# Paths configuration
+paths:
+  data_directory: "/home/wl4023/data/Sibo_22Mar2024/"
+  save_path: "/home/wl4023/github_repos/IRP/predict_result_1/"
+  cluster_file: "/home/wl4023/github_repos/IRP/result/"
+  preprocessor_file: "/home/wl4023/github_repos/IRP/preprocessor.pkl"
+
+# Model configuration
+model:
+  hidden_size: 100
+  input_node_channel: 1
+  output_node_channel: 1
+  num_mp_layers: [2, 2, 2]
+  hidden_channels: 16
+  n_mlp_mp: 3
+
+train:
+  epoch: 1
+  seq_len: 5

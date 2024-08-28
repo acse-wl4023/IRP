@@ -1,0 +1,2 @@
+Ave test loss: 0.4008136410867014
+Ave test metric: 0.02279323603837721

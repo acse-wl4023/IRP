@@ -48,10 +48,8 @@ class CAE_LSTM_decoder(nn.Module):
         self.cell = LSTM_cell(self.hidden_size, self.latent_space)
 
         # 使用 torch.Tensor 初始化参数张量
-        self.init_c = Parameter(torch.Tensor(2*self.hidden_size, self.latent_space))
-        self.init_h = Parameter(torch.Tensor(2*self.hidden_size, self.latent_space))
-        self.b_h = Parameter(torch.Tensor(self.latent_space))
-        self.b_c = Parameter(torch.Tensor(self.latent_space))
+        self.init_c = nn.Linear(2*self.hidden_size, self.latent_space)
+        self.init_h = nn.Linear(2*self.hidden_size, self.latent_space)
 
         self.decoder = Decoder(self.latent_space, 1)
 
@@ -59,8 +57,8 @@ class CAE_LSTM_decoder(nn.Module):
 
     def _init_states(self, h, c):
         combined_states = torch.cat((h, c), dim=1)
-        combined_c = self.act(combined_states @ self.init_c+self.b_c)
-        combined_h = self.act(combined_states @ self.init_h+self.b_h)
+        combined_c = self.act(self.init_c(combined_states))
+        combined_h = self.act(self.init_h(combined_states))
 
         return combined_h, combined_c
     

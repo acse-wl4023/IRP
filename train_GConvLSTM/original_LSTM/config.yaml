@@ -1,0 +1,15 @@
+experiment:
+  latent_space: 25
+  window_size: 10
+  step_size: 3
+  seq_len: 5
+
+# Paths configuration
+paths:
+  data_directory: "/home/wl4023/data/Sibo_22Mar2024/"
+  save_path: "/home/wl4023/github_repos/IRP/LSTM_compare/"
+  preprocessor_file: "/home/wl4023/github_repos/IRP/preprocessor.pkl"
+
+train:
+  epoch: 50
+  seq_len: 5
